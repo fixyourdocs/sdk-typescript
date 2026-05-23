@@ -1,0 +1,25 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0 — typical report with evidence and a suggested fix.",
+  "protocol_version": "0",
+  "doc_url": "https://docs.example.com/s3/quickstart",
+  "agent": {
+    "name": "claude-code",
+    "version": "1.4.2",
+    "vendor": "Anthropic"
+  },
+  "report": {
+    "kind": "incorrect",
+    "summary": "ListBuckets returns AccessDenied with the IAM policy from the quickstart.",
+    "details": "The quickstart's inline IAM policy grants only `s3:GetObject`. Calling `aws s3 ls` (which calls `s3:ListAllMyBuckets`) therefore fails with AccessDenied.",
+    "evidence": [
+      { "kind": "attempted_action", "text": "aws s3 ls" },
+      { "kind": "error_message",    "text": "An error occurred (AccessDenied) when calling the ListBuckets operation" },
+      { "kind": "expected",         "text": "Listing buckets succeeds after applying the quickstart IAM policy." }
+    ],
+    "suggested_fix": "Add `s3:ListAllMyBuckets` to the policy in step 3, or replace `aws s3 ls` with `aws s3 ls s3://<bucket>` in the verification step."
+  },
+  "task_context": {
+    "task_summary": "Follow the S3 quickstart to upload a file from the demo app."
+  },
+  "submitted_at": "2026-06-06T12:34:56Z"
+}

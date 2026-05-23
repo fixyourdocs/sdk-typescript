@@ -1,7 +1,5 @@
 # @fixyourdocs/sdk (TypeScript SDK)
 
-![Status: scaffolding](https://img.shields.io/badge/status-scaffolding-orange)
-
 Reference TypeScript SDK for the [Docs Feedback Protocol](https://github.com/fixyourdocs/protocol).
 The protocol lets AI agents file structured reports against documentation
 when the docs break agent task flows. Spec: <https://docsfeedback.org>.
@@ -12,16 +10,110 @@ when the docs break agent task flows. Spec: <https://docsfeedback.org>.
 npm install @fixyourdocs/sdk
 ```
 
-The npm package name (`@fixyourdocs/sdk`) will be claimed before first release.
-The current `0.0.0` build is a placeholder — the wire-format implementation
-lands per the v0 spec.
+Requires Node.js 20 or later (the SDK uses the built-in global `fetch`).
+No runtime dependencies.
 
-## Hello world
+## Quick start
 
 ```ts
-import { version } from "@fixyourdocs/sdk";
+import { Client, buildReport } from "@fixyourdocs/sdk";
 
-console.log(version);
+const client = new Client({
+  apiUrl: "https://hub.fixyourdocs.io",
+  // token: "<opaque-bearer-token>", // optional — only needed if the endpoint requires auth
+});
+
+const report = buildReport({
+  docUrl: "https://docs.example.com/s3/quickstart",
+  summary:
+    "ListBuckets returns AccessDenied with the IAM policy from the quickstart.",
+  kind: "incorrect",
+  agentName: "claude-code",
+  agentVersion: "1.4.2",
+  agentVendor: "Anthropic",
+  evidence: [
+    { kind: "attempted_action", text: "aws s3 ls" },
+    {
+      kind: "error_message",
+      text: "An error occurred (AccessDenied) when calling the ListBuckets operation",
+    },
+  ],
+  suggestedFix: "Add `s3:ListAllMyBuckets` to the policy in step 3.",
+});
+
+const result = await client.send(report);
+console.log(result.id, result.isDuplicate ? "(duplicate)" : "(new)");
+```
+
+## Advanced: build the wire-format object directly
+
+If you prefer to construct the nested wire-format object by hand, the
+underlying types are exported too:
+
+```ts
+import { Client, type Report } from "@fixyourdocs/sdk";
+
+const report: Report = {
+  protocol_version: "0",
+  doc_url: "https://docs.example.com/getting-started",
+  agent: { name: "aider" },
+  report: {
+    kind: "missing",
+    summary: "The page does not document how to set the AIDER_API_KEY env var.",
+  },
+};
+
+const client = new Client({ apiUrl: "https://hub.fixyourdocs.io" });
+await client.send(report, { idempotencyKey: "01HZA4F8PD9YQF1XGM3KQ8E5VR" });
+```
+
+## API shape
+
+The protocol's wire format is a nested object: `{ protocol_version,
+doc_url, agent: { name, ... }, report: { kind, summary, ... }, ... }`.
+The SDK ships two ways to produce it:
+
+- `buildReport({ docUrl, summary, kind, agentName, ... })` — flat,
+  ergonomic input. Validates lengths and patterns locally so most
+  shape mistakes throw before the network round-trip.
+- The exported types (`Report`, `AgentInfo`, `ReportBody`, `Evidence`,
+  `TaskContext`) for callers that prefer to build the nested object
+  themselves — useful when copying a payload verbatim from another
+  source.
+
+Both paths go through `Client.send(report, opts?)`.
+
+## Errors
+
+`Client.send` throws subclasses of `FixYourDocsError`:
+
+| Class                       | HTTP status |
+| --------------------------- | ----------- |
+| `ValidationError`           | 400         |
+| `AuthError`                 | 401         |
+| `NotFoundError`             | 404         |
+| `OptedOutError`             | 410         |
+| `PayloadTooLargeError`      | 413         |
+| `UnsupportedMediaTypeError` | 415         |
+| `PolicyRejectedError`       | 422         |
+| `RateLimitedError`          | 429         |
+| `ServerError`               | 5xx         |
+
+Where the error response body carries extra context, the typed error
+exposes it (`OptedOutError.since`, `PolicyRejectedError.reason`,
+`RateLimitedError.retryAfter`, `ValidationError.details`).
+
+The client retries once on 502 / 503 / 504. It does not auto-retry on
+429 — callers should respect `RateLimitedError.retryAfter`.
+
+## Development
+
+```sh
+npm install
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
 
 ## Licence

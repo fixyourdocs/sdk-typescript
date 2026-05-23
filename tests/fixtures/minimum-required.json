@@ -1,0 +1,12 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0 — smallest valid v0 report.",
+  "protocol_version": "0",
+  "doc_url": "https://docs.example.com/getting-started",
+  "agent": {
+    "name": "aider"
+  },
+  "report": {
+    "kind": "missing",
+    "summary": "The page does not document how to set the AIDER_API_KEY env var."
+  }
+}

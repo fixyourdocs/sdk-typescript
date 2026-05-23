@@ -1,0 +1,30 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0 — every optional v0 field populated.",
+  "protocol_version": "0",
+  "doc_url": "https://docs.example.com/api/widgets?lang=en",
+  "agent": {
+    "name": "cursor",
+    "version": "0.45.1",
+    "vendor": "Anysphere"
+  },
+  "report": {
+    "kind": "outdated",
+    "summary": "The `widgets.list()` example uses the v1 response shape; v2 wraps results in `data`.",
+    "details": "The page still shows the v1 shape:\n\n```json\n[{\"id\": \"…\"}]\n```\n\nThe live API (v2, since 2025-09) returns:\n\n```json\n{\"data\": [{\"id\": \"…\"}], \"next_cursor\": null}\n```",
+    "evidence": [
+      { "kind": "observed",      "text": "{\"data\": [{\"id\": \"wid_42\"}], \"next_cursor\": null}" },
+      { "kind": "expected",      "text": "[{\"id\": \"wid_42\"}]" },
+      { "kind": "code_snippet",  "text": "const widgets = await client.widgets.list();\nwidgets.map(w => w.id); // TypeError" },
+      { "kind": "quote",         "text": "\"widgets.list() returns an array of widget objects\"" }
+    ],
+    "suggested_fix": "Update the example to destructure `data` (and mention `next_cursor`):\n\n```js\nconst { data: widgets } = await client.widgets.list();\n```"
+  },
+  "task_context": {
+    "task_summary": "Implement a Widgets listing screen following the docs example.",
+    "transcript_excerpt": "I tried to call widgets.list() per the docs, but the returned value is an object, not an array, so .map crashed."
+  },
+  "idempotency_key": "01HZA4F8PD9YQF1XGM3KQ8E5VR",
+  "submitted_at": "2026-06-06T12:35:11Z",
+  "locale": "en",
+  "client_capabilities": []
+}
