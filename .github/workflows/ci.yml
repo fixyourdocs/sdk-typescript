@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test:
+    name: node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      - name: publint
+        if: matrix.node == '22'
+        run: npx -y publint
+      # `attw` (Are The Types Wrong) is intentionally not run in CI.
+      # Every version (0.13.x through 0.18.x) fails with
+      # `Cannot read properties of undefined (reading 'filename')`
+      # — an upstream fflate Gunzip 0-byte read that also reproduces
+      # against unrelated packages via `--from-npm react`. Re-enable
+      # once that bug is fixed upstream. publint above still gates
+      # package-shape regressions.

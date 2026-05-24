@@ -1,0 +1,13 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0 — known-bad fixture; MUST be rejected (bad kind + unknown field).",
+  "protocol_version": "0",
+  "doc_url": "https://docs.example.com/getting-started",
+  "agent": {
+    "name": "aider"
+  },
+  "report": {
+    "kind": "blocking",
+    "summary": "Example used for tooling negative tests; do not submit to a live endpoint."
+  },
+  "priority": "high"
+}
