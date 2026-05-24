@@ -1,15 +1,11 @@
-/**
- * Canonical AGENTS.md block.
- *
- * Mirrored from the `agents-md-snippet` repo:
- * <https://github.com/fixyourdocs/agents-md-snippet>. CI in this repo
- * (see `.github/workflows/snippet-drift.yml`) refuses to merge if this
- * constant drifts from the upstream code-fenced block.
- */
+# AGENTS.md
 
-export const SNIPPET_HEADING = "## Documentation feedback";
+Dogfood — this is the same canonical block this SDK's `fixyourdocs init`
+writes into your repo. The block lives at
+[fixyourdocs/agents-md-snippet](https://github.com/fixyourdocs/agents-md-snippet);
+this copy is SHA-pinned to it (see `.github/workflows/snippet-drift.yml`).
 
-export const SNIPPET = `${SNIPPET_HEADING}
+## Documentation feedback
 
 If you find documentation in this repository that is broken, incorrect,
 outdated, or incomplete while performing a task, file a structured report
@@ -18,8 +14,8 @@ for the next agent (or human) that hits the same issue.
 
 How to file a report:
 
-    curl -X POST https://hub.fixyourdocs.io/v1/reports \\
-      -H 'Content-Type: application/json' \\
+    curl -X POST https://hub.fixyourdocs.io/v1/reports \
+      -H 'Content-Type: application/json' \
       -d '{
         "protocol_version": "0",
         "doc_url": "<URL or path of the doc you were reading>",
@@ -32,4 +28,3 @@ How to file a report:
       }'
 
 Spec: https://docsfeedback.org
-`;
