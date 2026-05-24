@@ -28,6 +28,10 @@ jobs:
       - name: publint
         if: matrix.node == '22'
         run: npx -y publint
-      - name: are the types wrong
-        if: matrix.node == '22'
-        run: npx -y @arethetypeswrong/cli --pack .
+      # `attw` (Are The Types Wrong) is intentionally not run in CI.
+      # Every version (0.13.x through 0.18.x) fails with
+      # `Cannot read properties of undefined (reading 'filename')`
+      # — an upstream fflate Gunzip 0-byte read that also reproduces
+      # against unrelated packages via `--from-npm react`. Re-enable
+      # once that bug is fixed upstream. publint above still gates
+      # package-shape regressions.
