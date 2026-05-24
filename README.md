@@ -2,7 +2,10 @@
 
 Reference TypeScript SDK for the [Docs Feedback Protocol](https://github.com/fixyourdocs/protocol).
 The protocol lets AI agents file structured reports against documentation
-when the docs break agent task flows. Spec: <https://docsfeedback.org>.
+when the docs break agent task flows.
+
+- Spec: <https://docsfeedback.org>.
+- Why this exists: [the FixYourDocs manifesto](https://github.com/fixyourdocs/manifesto/blob/main/MANIFESTO.md).
 
 ## Install
 
