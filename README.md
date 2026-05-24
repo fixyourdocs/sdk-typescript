@@ -16,6 +16,32 @@ npm install @fixyourdocs/sdk
 Requires Node.js 20 or later (the SDK uses the built-in global `fetch`).
 No runtime dependencies.
 
+## CLI
+
+The package ships a `fixyourdocs` binary covering the two one-liners
+from the [agents-md-snippet](https://github.com/fixyourdocs/agents-md-snippet)
+README:
+
+```sh
+# Adds the canonical AGENTS.md block to your repo. Idempotent.
+npx fixyourdocs init
+
+# Sends a single report to the Hub.
+npx fixyourdocs report \
+  --doc-url https://example.com/docs/install \
+  --summary "Install fails on macOS 14" \
+  --agent claude-code \
+  --kind broken
+```
+
+`init` auto-detects `AGENTS.md`, `CLAUDE.md`, `.cursor/rules`, or
+`.github/copilot-instructions.md` and appends to whichever exists
+(falling back to creating `AGENTS.md`). Pass `--file <path>` to override.
+
+`report` accepts `--details`, `--suggested-fix`, `--api-url`, `--token`,
+and `--json` for machine-readable output. Exit codes: `0` success,
+`2` user error (unknown / missing flag), `1` transport or server error.
+
 ## Quick start
 
 ```ts
