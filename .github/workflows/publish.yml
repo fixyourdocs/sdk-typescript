@@ -17,6 +17,11 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
+      # OIDC trusted publishing requires npm >= 11.5.1; Node 22 still ships
+      # with npm 10.x. Upgrade before `npm publish` so the OIDC token flow
+      # is exercised end-to-end (provenance signing alone is not enough —
+      # the registry PUT also needs the OIDC handshake).
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
