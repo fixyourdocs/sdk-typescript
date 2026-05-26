@@ -8,6 +8,9 @@
  *   1 — transport / server error (network failure, 4xx/5xx from the hub).
  */
 
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+
 import { Client } from "./client.js";
 import { buildReport } from "./buildReport.js";
 import { FixYourDocsError } from "./errors.js";
@@ -318,13 +321,21 @@ export async function runCli(
 
 // Only auto-run when executed as a script (node dist/cli.js …), not when
 // imported by tests.
+//
+// When installed via npm, the `fixyourdocs` bin is exposed as a symlink at
+// `node_modules/.bin/fixyourdocs` pointing at `dist/cli.js`. In that case
+// `process.argv[1]` is the symlink path, not the resolved target, so a
+// literal compare against `import.meta.url`'s path — or an `endsWith("/cli.js")`
+// — never matches and the CLI silently exits 0. Resolve the symlink with
+// `realpathSync` and compare URLs, falling back to `false` on any failure
+// (e.g. ENOENT) so importing this module from tests stays a no-op.
 const isMain = (() => {
   if (typeof process === "undefined") return false;
   const entry = process.argv[1];
   if (entry === undefined) return false;
   try {
-    const here = new URL(import.meta.url).pathname;
-    return entry === here || entry.endsWith("/cli.js") || entry.endsWith("/cli.cjs");
+    const resolved = realpathSync(entry);
+    return import.meta.url === pathToFileURL(resolved).href;
   } catch {
     return false;
   }
