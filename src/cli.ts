@@ -221,13 +221,11 @@ async function runReport(
           id: result.id,
           received_at: result.received_at,
           is_duplicate: result.isDuplicate,
-          url: `${apiUrl.replace(/\/$/, "")}/r/${result.id}`,
         }),
       );
     } else {
       const label = result.isDuplicate ? "Duplicate report" : "Report accepted";
       io.stdout(`${label}: ${result.id}`);
-      io.stdout(`View: ${apiUrl.replace(/\/$/, "")}/r/${result.id}`);
     }
     return 0;
   } catch (err) {
