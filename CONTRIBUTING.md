@@ -33,4 +33,4 @@ comment on your PR with a one-click sign-off link. See the CLA text at
 
 By participating you agree to abide by the
 [Code of Conduct](CODE_OF_CONDUCT.md) (Contributor Covenant 2.1).
-Report incidents to <hello@fixyourdocs.org>.
+Report incidents to <hello@fixyourdocs.io>.
