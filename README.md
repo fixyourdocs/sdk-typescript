@@ -25,10 +25,10 @@ README:
 
 ```sh
 # Adds the canonical AGENTS.md block to your repo. Idempotent.
-npx fixyourdocs init
+npx @fixyourdocs/sdk init
 
 # Sends a single report to the Hub.
-npx fixyourdocs report \
+npx @fixyourdocs/sdk report \
   --doc-url https://example.com/docs/install \
   --summary "Install fails on macOS 14" \
   --agent claude-code \
