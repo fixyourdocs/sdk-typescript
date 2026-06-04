@@ -13,7 +13,7 @@ import {
 } from "./errors.js";
 import type { Report, SendResult } from "./types.js";
 
-const DEFAULT_USER_AGENT = "fixyourdocs-typescript/0.2.0";
+const DEFAULT_USER_AGENT = "fixyourdocs-typescript/0.2.1";
 
 export interface ClientOptions {
   /**

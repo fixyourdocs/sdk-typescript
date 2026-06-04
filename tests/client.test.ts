@@ -130,7 +130,7 @@ describe("Client.send", () => {
     expect(capturedHeaders?.get("content-type")).toBe("application/json");
     expect(capturedHeaders?.get("x-docs-feedback-protocol-version")).toBe("0");
     expect(capturedHeaders?.get("user-agent")).toBe(
-      "fixyourdocs-typescript/0.2.0",
+      "fixyourdocs-typescript/0.2.1",
     );
     expect(capturedHeaders?.get("authorization")).toBeNull();
     expect(capturedHeaders?.get("idempotency-key")).toBeNull();
