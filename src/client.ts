@@ -11,9 +11,11 @@ import {
   ValidationError,
   type ValidationErrorDetail,
 } from "./errors.js";
-import type { Report, SendResult } from "./types.js";
+import type { Report, SendResult, TaskContext } from "./types.js";
+import { assertPublicDocUrl } from "./privacy.js";
+import { assertNotOptedOut, OptOutCache } from "./discovery.js";
 
-const DEFAULT_USER_AGENT = "fixyourdocs-typescript/0.2.1";
+const DEFAULT_USER_AGENT = "fixyourdocs-typescript/0.3.0";
 
 export interface ClientOptions {
   /**
@@ -27,6 +29,29 @@ export interface ClientOptions {
   fetch?: typeof fetch;
   /** Override the `User-Agent` request header. */
   userAgent?: string;
+  /**
+   * Client-side privacy guard. When `true` (default), `send` refuses to
+   * report a `doc_url` that is not a public HTTPS doc page (local /
+   * private / link-gated host, non-public IP literal, or plaintext HTTP)
+   * and throws {@link PrivacyError} before any network call. Set `false`
+   * to skip the guard (e.g. when reporting against your own project's
+   * docs on an internal host).
+   */
+  enforcePrivacy?: boolean;
+  /**
+   * Whether to include `task_context.transcript_excerpt` in the POST
+   * body. Defaults to `false`: the excerpt is stripped before sending so
+   * private transcript context never leaves the client. Set `true` to
+   * send it as-is.
+   */
+  includeTranscript?: boolean;
+  /**
+   * Whether to perform `.well-known/docs-feedback.json` opt-out discovery
+   * against the `doc_url` host before posting. When `true` (default), a
+   * host that has opted out causes `send` to throw {@link OptedOutError}
+   * with no POST. Results are cached per host for 24h.
+   */
+  discoverOptOut?: boolean;
 }
 
 export interface SendOptions {
@@ -54,6 +79,25 @@ async function parseJson(response: Response): Promise<unknown> {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/**
+ * Return a shallow clone of `report` with
+ * `task_context.transcript_excerpt` removed. If that leaves
+ * `task_context` empty, drop it entirely. Never mutates the input.
+ */
+function stripTranscript(report: Report): Report {
+  if (report.task_context?.transcript_excerpt === undefined) {
+    return report;
+  }
+  const { transcript_excerpt: _omit, ...restContext } = report.task_context;
+  const cloned: Report = { ...report };
+  if (Object.keys(restContext).length === 0) {
+    delete cloned.task_context;
+  } else {
+    cloned.task_context = restContext as TaskContext;
+  }
+  return cloned;
 }
 
 function parseRetryAfter(header: string | null): number | undefined {
@@ -125,6 +169,10 @@ export class Client {
   private readonly token?: string;
   private readonly fetchImpl: typeof fetch;
   private readonly userAgent: string;
+  private readonly enforcePrivacy: boolean;
+  private readonly includeTranscript: boolean;
+  private readonly discoverOptOut: boolean;
+  private readonly optOutCache = new OptOutCache();
 
   constructor(opts: ClientOptions) {
     if (typeof opts.apiUrl !== "string" || opts.apiUrl.length === 0) {
@@ -140,6 +188,9 @@ export class Client {
     }
     this.fetchImpl = f;
     this.userAgent = opts.userAgent ?? DEFAULT_USER_AGENT;
+    this.enforcePrivacy = opts.enforcePrivacy ?? true;
+    this.includeTranscript = opts.includeTranscript ?? false;
+    this.discoverOptOut = opts.discoverOptOut ?? true;
   }
 
   /**
@@ -147,6 +198,24 @@ export class Client {
    * on 429 — callers should respect `RateLimitedError.retryAfter`.
    */
   async send(report: Report, opts: SendOptions = {}): Promise<SendResult> {
+    // Client-side privacy guard: refuse non-public-HTTPS doc URLs BEFORE
+    // any network call (no fetch happens on rejection).
+    if (this.enforcePrivacy) {
+      assertPublicDocUrl(report.doc_url);
+    }
+
+    // Opt-out discovery: refuse if the doc host has published an opt-out.
+    // Runs before the POST; throws OptedOutError on opt-out.
+    if (this.discoverOptOut) {
+      await assertNotOptedOut(report.doc_url, this.fetchImpl, this.optOutCache);
+    }
+
+    // Strip the transcript excerpt unless explicitly requested. Clone so
+    // the caller's `report` object is never mutated.
+    const outgoing = this.includeTranscript
+      ? report
+      : stripTranscript(report);
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "X-Docs-Feedback-Protocol-Version": "0",
@@ -159,7 +228,7 @@ export class Client {
     if (opts.idempotencyKey !== undefined) {
       headers["Idempotency-Key"] = opts.idempotencyKey;
     }
-    const body = JSON.stringify(report);
+    const body = JSON.stringify(outgoing);
 
     const doRequest = () =>
       this.fetchImpl(this.endpoint, {

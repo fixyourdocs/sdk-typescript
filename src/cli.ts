@@ -38,8 +38,15 @@ AGENTS.md / CLAUDE.md / .cursor/rules / .github/copilot-instructions.md
 is found, the block is appended to that file; otherwise AGENTS.md is
 created.
 
+With --global, writes the consumer-mode "report stale third-party docs"
+block to your GLOBAL agent config (default ~/.claude/CLAUDE.md) instead,
+so any project you work on can offer to report broken external docs.
+
 Options:
-  --file <path>       Explicit target file (skips auto-detection).
+  --global            Write the consumer-mode block to your global agent
+                      config (default ~/.claude/CLAUDE.md). Idempotent.
+  --file <path>       Explicit target file (skips auto-detection; under
+                      --global a relative path resolves against $HOME).
   --json              Emit machine-readable JSON instead of plain text.
   -h, --help          Show this message.`;
 
@@ -255,7 +262,7 @@ async function runInitCommand(
 
   let parsed: ParsedArgs;
   try {
-    parsed = parseArgs(argv, ["--file"], ["--json"]);
+    parsed = parseArgs(argv, ["--file"], ["--json", "--global"]);
   } catch (err) {
     io.stderr(
       `error: ${err instanceof Error ? err.message : String(err)}`,
@@ -264,10 +271,16 @@ async function runInitCommand(
     return 2;
   }
 
+  const isGlobal = parsed.switches.has("--global");
   const result = runInit({
     cwd: process.cwd(),
     file: parsed.flags.get("--file"),
+    global: isGlobal,
   });
+
+  const what = isGlobal
+    ? "consumer-mode (third-party docs) block"
+    : "FixYourDocs snippet";
 
   if (parsed.switches.has("--json")) {
     io.stdout(
@@ -275,14 +288,15 @@ async function runInitCommand(
         path: result.path,
         changed: result.changed,
         created: result.created,
+        global: isGlobal,
       }),
     );
   } else if (result.created) {
-    io.stdout(`Created ${result.path} with the FixYourDocs snippet.`);
+    io.stdout(`Created ${result.path} with the ${what}.`);
   } else if (result.changed) {
-    io.stdout(`Appended the FixYourDocs snippet to ${result.path}.`);
+    io.stdout(`Appended the ${what} to ${result.path}.`);
   } else {
-    io.stdout(`No changes — snippet already present in ${result.path}.`);
+    io.stdout(`No changes — ${what} already present in ${result.path}.`);
   }
   return 0;
 }

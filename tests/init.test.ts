@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../src/init.js";
+import { GLOBAL_HEADING, GLOBAL_SNIPPET, runInit } from "../src/init.js";
 import { SNIPPET, SNIPPET_HEADING } from "../src/snippet.js";
 
 describe("runInit", () => {
@@ -76,5 +76,48 @@ describe("runInit", () => {
     const result = runInit({ cwd, file: "INSTRUCTIONS.md" });
     expect(result.path).toBe(path);
     expect(result.created).toBe(true);
+  });
+});
+
+describe("runInit --global", () => {
+  let cwd: string;
+
+  beforeEach(() => {
+    cwd = mkdtempSync(join(tmpdir(), "fyd-init-global-"));
+  });
+
+  it("writes the Mode B block to an absolute --file target", () => {
+    const target = join(cwd, "GLOBAL.md");
+    const result = runInit({ cwd, global: true, file: target });
+    expect(result.created).toBe(true);
+    expect(result.changed).toBe(true);
+    expect(result.path).toBe(target);
+    const written = readFileSync(target, "utf8");
+    expect(written).toBe(GLOBAL_SNIPPET);
+    expect(written).toContain(GLOBAL_HEADING);
+    // It is the consumer block, not the per-repo Mode A snippet.
+    expect(written).not.toContain(SNIPPET_HEADING);
+    // Must never claim it is about "this repository".
+    expect(written).not.toContain("this repository");
+  });
+
+  it("is idempotent on re-run", () => {
+    const target = join(cwd, "GLOBAL.md");
+    runInit({ cwd, global: true, file: target });
+    const first = readFileSync(target, "utf8");
+    const result = runInit({ cwd, global: true, file: target });
+    expect(result.changed).toBe(false);
+    expect(readFileSync(target, "utf8")).toBe(first);
+  });
+
+  it("appends to an existing global file without duplicating", () => {
+    const target = join(cwd, "GLOBAL.md");
+    writeFileSync(target, "# My global agent config\n");
+    const result = runInit({ cwd, global: true, file: target });
+    expect(result.created).toBe(false);
+    expect(result.changed).toBe(true);
+    const after = readFileSync(target, "utf8");
+    expect(after.startsWith("# My global agent config\n")).toBe(true);
+    expect(after).toContain(GLOBAL_HEADING);
   });
 });
