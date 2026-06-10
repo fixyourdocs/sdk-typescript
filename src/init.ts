@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 
 import { SNIPPET, SNIPPET_HEADING } from "./snippet.js";
 
@@ -104,6 +104,10 @@ export function runInit(opts: InitOptions): InitResult {
     : resolve(opts.cwd, opts.file ?? pickDefaultTarget(opts.cwd));
 
   if (!existsSync(path)) {
+    // The global target (e.g. ~/.claude/CLAUDE.md) may live in a directory
+    // that does not exist yet; create it so a first-time `--global` run does
+    // not throw ENOENT. (Mirrors the Python SDK's `mkdir(parents=True)`.)
+    mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, snippet);
     return { path, changed: true, created: true };
   }

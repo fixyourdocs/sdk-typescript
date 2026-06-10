@@ -101,6 +101,15 @@ describe("runInit --global", () => {
     expect(written).not.toContain("this repository");
   });
 
+  it("creates missing parent directories for the global target", () => {
+    // First-time `--global` users have no ~/.claude dir yet; the write must
+    // not throw ENOENT.
+    const target = join(cwd, "nested", "deeper", "CLAUDE.md");
+    const result = runInit({ cwd, global: true, file: target });
+    expect(result.created).toBe(true);
+    expect(readFileSync(target, "utf8")).toBe(GLOBAL_SNIPPET);
+  });
+
   it("is idempotent on re-run", () => {
     const target = join(cwd, "GLOBAL.md");
     runInit({ cwd, global: true, file: target });
