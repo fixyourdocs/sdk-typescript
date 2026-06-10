@@ -2,6 +2,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -25,7 +26,18 @@ const ENDPOINT = `${API_BASE}/v1/reports`;
 
 const server = setupServer();
 
+// Default: the sample report's doc host has no opt-out (404). Individual
+// tests can override. Without this, every send() in this suite would make
+// an unhandled .well-known GET and MSW would error.
+const DEFAULT_HANDLERS = [
+  http.get(
+    "https://docs.example.com/.well-known/docs-feedback.json",
+    () => new HttpResponse(null, { status: 404 }),
+  ),
+];
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeEach(() => server.use(...DEFAULT_HANDLERS));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
@@ -130,7 +142,7 @@ describe("Client.send", () => {
     expect(capturedHeaders?.get("content-type")).toBe("application/json");
     expect(capturedHeaders?.get("x-docs-feedback-protocol-version")).toBe("0");
     expect(capturedHeaders?.get("user-agent")).toBe(
-      "fixyourdocs-typescript/0.2.1",
+      "fixyourdocs-typescript/0.3.0",
     );
     expect(capturedHeaders?.get("authorization")).toBeNull();
     expect(capturedHeaders?.get("idempotency-key")).toBeNull();

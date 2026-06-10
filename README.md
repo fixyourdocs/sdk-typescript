@@ -43,6 +43,41 @@ npx @fixyourdocs/sdk report \
 and `--json` for machine-readable output. Exit codes: `0` success,
 `2` user error (unknown / missing flag), `1` transport or server error.
 
+### Consumer mode (`init --global`)
+
+```sh
+# Writes a "report stale third-party docs" block to your GLOBAL agent
+# config (default ~/.claude/CLAUDE.md), so any project you work on can
+# offer to report broken external docs. Idempotent.
+npx @fixyourdocs/sdk init --global
+```
+
+Pass `--file <path>` to target a different global config file (a relative
+path resolves against `$HOME`). This is distinct from the per-repo `init`,
+which adds the project-docs feedback block to `AGENTS.md` / `CLAUDE.md`.
+
+## Consumer-mode client options
+
+When an agent reports against arbitrary third-party docs (rather than its
+own project's docs), three `ClientOptions` keep that safe. All are on by
+default:
+
+| Option              | Default | Behaviour                                                                                                                                              |
+| ------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enforcePrivacy`    | `true`  | Refuse (throw `PrivacyError`, no network call) when `doc_url` is not a public HTTPS page — `http://`, `localhost`/`.local`/`.internal`, bare hostnames, or loopback/private/link-local IPs. |
+| `includeTranscript` | `false` | When `false`, omit `task_context.transcript_excerpt` from the POST body (and drop `task_context` if that empties it). The caller's object is not mutated. |
+| `discoverOptOut`    | `true`  | Before posting, GET `https://<doc-host>/.well-known/docs-feedback.json`; an `opt_in: false` response throws `OptedOutError` with no POST. Cached per host for 24h. |
+
+```ts
+const client = new Client({
+  apiUrl: "https://hub.fixyourdocs.io",
+  // defaults shown; pass to override
+  enforcePrivacy: true,
+  includeTranscript: false,
+  discoverOptOut: true,
+});
+```
+
 ## Quick start
 
 ```ts
@@ -119,10 +154,11 @@ Both paths go through `Client.send(report, opts?)`.
 
 | Class                       | HTTP status |
 | --------------------------- | ----------- |
+| `PrivacyError`              | — (client)  |
 | `ValidationError`           | 400         |
 | `AuthError`                 | 401         |
 | `NotFoundError`             | 404         |
-| `OptedOutError`             | 410         |
+| `OptedOutError`             | 410 / client |
 | `PayloadTooLargeError`      | 413         |
 | `UnsupportedMediaTypeError` | 415         |
 | `PolicyRejectedError`       | 422         |
@@ -135,6 +171,11 @@ exposes it (`OptedOutError.since`, `PolicyRejectedError.reason`,
 
 The client retries once on 502 / 503 / 504. It does not auto-retry on
 429 — callers should respect `RateLimitedError.retryAfter`.
+
+`PrivacyError` and `OptedOutError` can also be thrown **client-side**,
+before any POST: `PrivacyError` from the privacy guard (`enforcePrivacy`)
+and `OptedOutError` from `.well-known` opt-out discovery
+(`discoverOptOut`). See [Consumer-mode client options](#consumer-mode-client-options).
 
 ## Development
 

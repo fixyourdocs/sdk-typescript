@@ -9,4 +9,4 @@ export { Client } from "./client.js";
 export type { ClientOptions, SendOptions } from "./client.js";
 export { buildReport } from "./buildReport.js";
 
-export const VERSION = "0.2.1";
+export const VERSION = "0.3.0";

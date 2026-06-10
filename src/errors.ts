@@ -51,6 +51,20 @@ export class OptedOutError extends FixYourDocsError {
   }
 }
 
+/**
+ * Client-side refusal: `doc_url` does not point at a public HTTPS doc
+ * page (local / private / link-gated host, an IP literal in a
+ * non-public range, or plaintext HTTP). Raised by the privacy guard
+ * before any network call — distinct from {@link OptedOutError}, which
+ * is a host that exists publicly but has opted out.
+ */
+export class PrivacyError extends FixYourDocsError {
+  constructor(message: string) {
+    super(message);
+    this.name = "PrivacyError";
+  }
+}
+
 /** HTTP 413 — body exceeds the server's size limit. */
 export class PayloadTooLargeError extends FixYourDocsError {
   readonly maxBytes?: number;

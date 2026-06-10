@@ -22,7 +22,18 @@ const API_BASE = "https://hub.example.test";
 const ENDPOINT = `${API_BASE}/v1/reports`;
 const server = setupServer();
 
+// The report subcommand reports against example.com docs; with opt-out
+// discovery on by default, each send() makes a .well-known GET. Answer it
+// with a 404 (no opt-out) so the POST proceeds.
+const DEFAULT_HANDLERS = [
+  http.get(
+    "https://example.com/.well-known/docs-feedback.json",
+    () => new HttpResponse(null, { status: 404 }),
+  ),
+];
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeEach(() => server.use(...DEFAULT_HANDLERS));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
@@ -110,6 +121,41 @@ describe("runCli — init", () => {
     const code = await runCli(["init", "--nope"], io);
     expect(code).toBe(2);
     expect(io.err.join("\n")).toContain("unknown argument");
+  });
+
+  it("--global --file writes the Mode B block; idempotent on re-run", async () => {
+    const target = join(cwd, "GLOBAL.md");
+    const io1 = captureIO();
+    const code1 = await runCli(["init", "--global", "--file", target], io1);
+    expect(code1).toBe(0);
+    const written = readFileSync(target, "utf8");
+    expect(written).toContain("## Reporting stale third-party docs");
+    expect(written).not.toContain("## Documentation feedback");
+    expect(written).not.toContain("this repository");
+    expect(io1.out.join("\n")).toContain("Created");
+
+    const io2 = captureIO();
+    const code2 = await runCli(["init", "--global", "--file", target], io2);
+    expect(code2).toBe(0);
+    expect(io2.out.join("\n")).toContain("No changes");
+  });
+
+  it("--global --json reports the global flag", async () => {
+    const target = join(cwd, "GLOBAL.md");
+    const io = captureIO();
+    const code = await runCli(
+      ["init", "--global", "--file", target, "--json"],
+      io,
+    );
+    expect(code).toBe(0);
+    const parsed = JSON.parse(io.out[0] ?? "") as {
+      path: string;
+      global: boolean;
+      created: boolean;
+    };
+    expect(parsed.global).toBe(true);
+    expect(parsed.created).toBe(true);
+    expect(parsed.path).toBe(target);
   });
 });
 
